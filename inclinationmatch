@@ -1,0 +1,30 @@
+set Ship_angvel to VCRS(ship:velocity:orbit,(ship:position-Kerbin:position)).
+set Target_angvel to VCRS(target:velocity:orbit,(target:position-Kerbin:position)).
+set asc_node_vec to VCRS(Ship_angvel,Target_angvel).
+
+set vec1 to VCRS((-1*Kerbin:position),asc_node_vec):normalized+Ship_angvel:normalized.
+set ang to VANG(asc_node_vec,(-1*Kerbin:position)).
+if vec1:mag > 1 {
+    set asc_node_TA to ship:orbit:trueanomaly - ang.
+    if asc_node_TA < 0 {
+        set asc_node_TA to 360 + asc_node_TA.
+        }
+    if asc_node_TA > 360 {
+        set asc_node_TA to asc_node_TA - 360.
+        }
+    }
+if vec1:mag < 1 {
+    set asc_node_TA to ship:orbit:trueanomaly + ang.
+    if asc_node_TA < 0 {
+        set asc_node_TA to 360 + asc_node_TA.
+        }
+    if asc_node_TA > 360 {
+        set asc_node_TA to asc_node_TA - 360.
+        }
+    }
+
+print "True Anomaly of Ascending Node = " + round(asc_node_TA).
+
+set Arrow1 to VECDRAW(Kerbin:position,Ship_angvel,RGB(1,0,0),"Ship Angular Velocity",0.5,TRUE,1).
+set Arrow2 to VECDRAW(Kerbin:position,Target_angvel,RGB(0,1,0),"Target Angular Velocity",0.5,TRUE,1).
+set Arrow3 to VECDRAW(Kerbin:position,asc_node_vec,RGB(0,0,1),"Target Angular Velocity",0.5,TRUE,1).
