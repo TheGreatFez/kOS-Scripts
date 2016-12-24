@@ -21,9 +21,12 @@ set flightmode to 0.
 warpto(time:seconds + eta:apoapsis - BurnTimeWarp - 10).
 
 until DeltaV:mag < .1 AND flightmode = 1 {
-
+	print "Burn Time = " + round(BurnTime,2) + "secs   " at(0,2).
     if flightmode = 0 AND BurnTime*.5 >= eta:apoapsis {
         lock throttle to DeltaV:mag*(mass/max(.0001,availablethrust)).
         set flightmode to 1.
     }
 }
+clearscreen.
+print "Finished Circularization".
+wait 1.

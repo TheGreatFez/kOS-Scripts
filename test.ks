@@ -1,6 +1,5 @@
-clearscreen.
-
-until altitude > 70000 {
-print "Airspeed = " + round(airspeed,2) at (0,0).
-print "Thrust    = " + round(throttle*ship:maxthrust,2) at (0,2).
-}
+lock ang to VANG(Sun:position,Mun:position).
+print round(ang).
+set warp to 4.
+wait until ang < 5.
+set warp to 0.

@@ -20,7 +20,7 @@ set alt1 to 29516.50.
 set qswitch to 0.301224691747042.
 set etaSSing to 255.057279755142.
 // lock pitch to a1*(constant:e)^(-((altitude-b1)/c1)^2) + a2*(constant:e)^(-((altitude-b2)/c2)^2) +  a3*(constant:e)^(-((altitude-b3)/c3)^2) + a4*(constant:e)^(-((altitude-b4)/c4)^2).
-lock pitch to a1*(constant:e)^(-((altitude-b1)/c1)^2) + a2*(constant:e)^(-((altitude-b2)/c2)^2) +  a3*(constant:e)^(-((altitude-b3)/c3)^2) + a4*(constant:e)^(-((altitude-b4)/c4)^2).
+//lock pitch to a1*(constant:e)^(-((altitude-b1)/c1)^2) + a2*(constant:e)^(-((altitude-b2)/c2)^2) +  a3*(constant:e)^(-((altitude-b3)/c3)^2) + a4*(constant:e)^(-((altitude-b4)/c4)^2).
 lock steering to heading(90,min(90,max(0,pitch))).
 lock throttle to thrust.
 stage.

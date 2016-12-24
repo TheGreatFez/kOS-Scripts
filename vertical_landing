@@ -1,4 +1,4 @@
-declare parameter LandingPeriapsis,CutOffSpeed,CutOffThrottle.
+declare parameter LandingPosition.
 clearscreen.
 // This sets some pre launch parameters such as determining what the true altiude is of the base of the rocket.
 set ship:control:pilotmainthrottle to 0.
@@ -9,16 +9,8 @@ lock true_alt to altitude - ship:geoposition:terrainheight.// - start_alt. // Ag
 // This script is meant to be used from a flat surface to launch and return. It can be adapted for landing from any situation.
 SAS off.
 GEAR OFF.
-lock steering to retrograde.
-print "Aligning with Orbit Retrograde".
-wait 15.
-print "Burning to Drop Periapsis to " + round(LandingPeriapsis,2).
-lock throttle to 1 - (.9*LandingPeriapsis)/periapsis.
-wait until periapsis <= LandingPeriapsis.
-lock throttle to 0.
-wait 1.
-print "Warping to Periapsis".
-warpto(time:seconds + eta:periapsis - 30).
+set CutOffThrottle to 0.
+
 lock V to ship:velocity:orbit.
 lock R to ship:body:position.
 lock Vper to VDOT(VCRS(R,VCRS(V,R)):direction:vector,V).
@@ -59,15 +51,16 @@ set count to 1.
 set flightmode to 1.
 lock steering to srfretrograde.
 until flightmode = 2 AND ship:status = "LANDED" {
-	
-	if verticalspeed > 0 OR ship:orbit:trueanomaly <= 180 {
-		set ThrustSet to 1.
-		wait until ship:velocity:surface:mag <= CutOffSpeed.
-		set ThrustSet to 0.
-		GEAR on.
-	}
+	set LandingVector to VECDRAW(LandingPosition:position,(altitude-LandingPosition:terrainheight+25)*(LandingPosition:position-R):normalized,GREEN,"Landing Position",1.0,TRUE,.5).
+	//if verticalspeed > 0 OR ship:orbit:trueanomaly <= 180 {
+	//	set ThrustSet to 1.
+	//	wait until ship:velocity:surface:mag <= CutOffSpeed.
+	//	set ThrustSet to 0.
+	//	GEAR on.
+	//}
 	
 	if flightmode = 1 AND true_alt < 100 AND ship:velocity:surface:mag < TouchDownSpeed AND GroundSpeed < 1 {
+	    GEAR on.
 		lock steering to up.
 		lock throttle to .99*mass*-1*GravUp/availablethrust.
 		set flightmode to 2.
@@ -136,27 +129,3 @@ SAS on.
 unlock steering.
 wait 10.
 clearscreen.
-if ship:status = "LANDED" {
-
-	set M0 to 24.92998.
-	set M1 to mass.
-	set ISP to 350.
-	set g0 to 9.80665.
-
-	set DeltaV_used to g0*ISP*ln(M0/M1).
-
-	set Rf to ship:body:radius + altitude.
-	set Rcir to ship:body:radius + 100000.
-	set u to ship:body:MU.
-	set a to (Rf + Rcir)/2.
-	set e to (Rcir - Rf)/(Rf + Rcir).
-	set Vgrnd to 2*Rf*(constant():pi)/138984.38.
-	set Vcir to sqrt(u/Rcir).
-	set Vap to sqrt(((1 - e)*u)/((1 + e)*a)).
-	set Vper to sqrt(((1 + e)*u)/((1 - e)*a)).
-	set DeltaV_opt to (Vcir - Vap) + (Vper-Vgrnd).
-	set Deviation to DeltaV_used - DeltaV_opt.
-	
-	print "You used " + round(Deviation,2) + "m/s more than the optimal" at(0,20).
-
-}

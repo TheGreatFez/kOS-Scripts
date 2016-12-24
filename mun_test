@@ -1,0 +1,15 @@
+set target to "Mun".
+run launch(150000).
+run rdz_circular.
+run executenode.
+warpto(time:seconds + ship:orbit:nextpatcheta).
+wait until ship:body:name = "Mun".
+run capture.
+run CircularizePE.
+lock ang to VANG(Sun:position,Mun:position).
+if ang > 5 {set warp to 4.}
+wait until ang < 5.
+set warp to 0.
+stage.
+TOGGLE AG1.
+run landing(6000,25,.1).
