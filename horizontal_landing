@@ -3,7 +3,7 @@
 //-Only works if the ship does not have to stage in the middle of the landing burn. Otherwise all calculations might be thrown off
 //-Only works if the ship is at near 0 starting inclination and very circular
 
-// Execute Node Function
+// Execute Node Function that I use for maneuver nodes
 declare function ExecuteNode {
 	clearscreen.
 	lock throttle to 0.
@@ -40,26 +40,23 @@ declare function ExecuteNode {
 CLEARVECDRAWS().
 SAS OFF.
 lock steering to srfretrograde.
-set landing_pos to LATLNG(0,90).
-set buffer_dist to 10.
-set buffer_speed_h to 0.
-set landing_per_buffer to 500.
-set landing_eta_buffer to 50.
-set CutOffThrottle to .75.
-set MaxCount to 3.
+set landing_pos to LATLNG(0,90).// Where you want to land, currently can only be at 0 lattitude
+set landing_per_buffer to 500. 	// How high above the landing postion do you want the periapsis of the transfer orbit to be. 
+								// NOTE: If this is too low your ship might crash because it starts to drop as it looses horizontal speed.
+								// 500m worked very well for my test ship which had a starting Mun TWR of 5.91
 
 lock R_ship to ship:body:position.
 lock angle_diff_h to VANG(-R_ship, landing_pos:position - R_ship).
-lock dist_diff_h to (angle_diff_h/360)*2*(constant:pi)*R_ship:mag.
+lock dist_diff_h to (angle_diff_h/360)*2*(constant:pi)*R_ship:mag. // Converstion of the difference in angle to a distance
 lock Velocity_h_norm to VCRS(VCRS(R_ship,ship:velocity:orbit),R_ship):normalized.
 lock Speed_h to VDOT(Velocity_h_norm,ship:velocity:orbit).
-lock speed_diff_h to Speed_h-landing_pos:altitudevelocity(altitude):orbit:mag.
+lock speed_diff_h to Speed_h-landing_pos:altitudevelocity(altitude):orbit:mag. // Converstion of the difference in angular speed to a speed difference
 clearscreen.
 
 set prev_dist_h to dist_diff_h.
 wait .1.
 set curr_dist_h to dist_diff_h.
-set delta_dist_h to curr_dist_h - prev_dist_h. 
+set delta_dist_h to curr_dist_h - prev_dist_h. // Check to see if you are infront of behind the desired maneuver node burn point
 
 if delta_dist_h > 0 {
 	set eta_node to ((constant:pi)*R_ship:mag-dist_diff_h)/speed_diff_h.
@@ -69,6 +66,7 @@ if delta_dist_h > 0 {
 } else {
 	set eta_node to ((constant:pi)*R_ship:mag+dist_diff_h)/speed_diff_h.
 	}
+// Calculte and set the maneuver node. The periapsis will be the preset landing periapsis buffer altitude above the ground at the landing point.
 set R_per_landing to ship:body:radius + landing_pos:terrainheight + landing_per_buffer.
 set SMA_landing to (R_ship:mag + R_per_landing)/2.
 set ecc_landing to (R_ship:mag - R_per_landing)/(R_ship:mag + R_per_landing).
@@ -85,7 +83,6 @@ lock steering to srfretrograde.
 set landing_pos to LATLNG(0,90).
 set buffer_dist to 0.
 set buffer_speed_h to 0.
-set landing_per_buffer to 500.
 set landing_eta_buffer to 50.
 set CutOffThrottle to 0.
 set MaxCount to 5.
@@ -97,10 +94,15 @@ lock Velocity_h_norm to VCRS(VCRS(R_ship,ship:velocity:orbit),R_ship):normalized
 lock Speed_h to VDOT(Velocity_h_norm,ship:velocity:orbit).
 lock speed_diff_h to Speed_h-landing_pos:altitudevelocity(altitude):orbit:mag.
 clearscreen.
-// End of commenting section.
+// End of error commenting section.
+// This is the heart of the function. The max horizontal acceleration is calculated as if the rocket is always in surface retrograde. 
+// Maintaining surface retrograde maximizes efficiency when landing
+// Vmax_h is the maximum speed a ship can be traveling at its current distance to the target such that at full thrust it will reach the target with 0 velocity (aka suicide burn)
+// Vmax_h assumes the thrust is constant but updates it to the current max horizontal acceleration and uses a PD loop to deal with the changing TWR
 lock MaxThrustAccHor to -1*VDOT(Velocity_h_norm,availablethrust/mass*srfretrograde:vector).
 lock Vmax_h to sqrt(MAX(0,2*(dist_diff_h-buffer_dist)*MaxThrustAccHor) + buffer_speed_h^2).
 
+// Standard PD loop parameters
 lock error_h to Vmax_h - speed_diff_h.
 set errorP_h to 0.
 set Kp_h to 0.07.
@@ -112,7 +114,7 @@ set time0 to time:seconds.
 lock time1 to time:seconds - time0.
 set count to 1.
 set flightmode to 1.
-
+// Just a nice helping orientation so that your ship is already close to ready to go when it is done warping to the periapsis
 set align_vector to -1*landing_pos:altitudevelocity(altitude):orbit.
 lock steering to align_vector.
 print "Aligning with Surface Retrograde Preemptively".
@@ -125,9 +127,10 @@ warpto(time:seconds + eta:periapsis - landing_eta_buffer).
 lock steering to srfretrograde.
 clearscreen.
 until flightmode = 2 {
+	// A visual aid to show where the ship is supposed to land.
 	set LandingVector to VECDRAW(landing_pos:position,(altitude-landing_pos:terrainheight+25)*(landing_pos:position-R_ship):normalized,GREEN,"Landing Position",1.0,TRUE,.5).
 	if flightmode = 1 {
-	
+		// Main PD loop for the thrust control
 		set error1_h to error_h.
 		set t1 to time1.
 		wait .00001.
@@ -157,6 +160,8 @@ until flightmode = 2 {
 		if ThrustSet > 1 {
 			set ThrustSet to 1.
 			}
+		// The Cut Off Thrust is used to help maximize efficiency. At 0 it is a nice smooth ramp up but if you make the fuel cut off higher it only turns on when its above this value and thus increases efficiency
+		// since the ship will be burning at a higher throttle on average (100% throttle is the most efficient but that requires some more calculations).
 		if ThrustSet < CutOffThrottle {
 			set ThrustSet to 0.
 			}
@@ -164,6 +169,7 @@ until flightmode = 2 {
 			set ThrustSet to 1. // This is very important. If the error ever drops below 0, it means it might crash since the
 								// equation is calculated based on full thrust. 
 			}
+		// Cut off conditions to switch to vertical landing portion of the controller
 		if speed_diff_h < 1 {
 			set ThrustSet to 0.
 			set flightmode to 2.
@@ -183,4 +189,4 @@ until flightmode = 2 {
 	print "ThrustSet = " + round(ThrustSet*100,2) + "%     " at (0,6).
 	print "Flightmode = " + flightmode at (0,7).
 	}
-	run vertical_landing(landing_pos).
+	run vertical_landing(landing_pos,TRUE).

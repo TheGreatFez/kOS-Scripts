@@ -1,6 +1,9 @@
-declare parameter LandingPosition.
+// This script is essentially the same principle as the horizontal landing however it 
+declare parameter LandingPosition is latlng(0,0), SpotLanding is FALSE.
+// This script can funcion on its own and thus doesn't need the LandingPosition to be displayed
+// SpotLanding is used for when using horizontal_landing
 clearscreen.
-// This sets some pre launch parameters such as determining what the true altiude is of the base of the rocket.
+// This sets some landing parameters such as determining what the true altiude is of the base of the rocket.
 set ship:control:pilotmainthrottle to 0.
 set TouchDownSpeed to 5. // This is set by the user, I set it to 5 since the landing legs break at 6.
 set MaxCount to 3. // Used to average the derivative term since it can get pretty eratic
@@ -21,14 +24,7 @@ lock AccelCent to (Vper^2)/R:mag.
 lock MaxThrustAccUp to VDOT(UP:vector,availablethrust/mass*srfretrograde:vector).
 // This assumes the ship is pointed exactly retrograde. Meaning this can be used as a gravity turn for landing as well.
 lock GravUp to (-1)*(ship:body:mu)/((R:mag)^2).
-
 lock MaxAccUp to MaxThrustAccUp + GravUp + AccelCent. // I opted out of adding drag since its finiky, this adds some safety margin though
-// log "1" to landingdata.csv.
-// delete landingdata.csv.
-// log "Time,Vmax,Vvert,Altitude,Error,ThrustSet,MaxAccUp" to landingdata.csv.
-// Log various variables to view. This can be changed to your liking or commented out if you don't need it.
-//wait until verticalspeed < -20. // Just to make sure there are no weird transition errors.
-
 lock FPAsurf to 90 - VANG(UP:vector,ship:velocity:surface).
 
 clearscreen.
@@ -51,23 +47,19 @@ set count to 1.
 set flightmode to 1.
 lock steering to srfretrograde.
 until flightmode = 2 AND ship:status = "LANDED" {
-	set LandingVector to VECDRAW(LandingPosition:position,(altitude-LandingPosition:terrainheight+25)*(LandingPosition:position-R):normalized,GREEN,"Landing Position",1.0,TRUE,.5).
-	//if verticalspeed > 0 OR ship:orbit:trueanomaly <= 180 {
-	//	set ThrustSet to 1.
-	//	wait until ship:velocity:surface:mag <= CutOffSpeed.
-	//	set ThrustSet to 0.
-	//	GEAR on.
-	//}
-	
-	if flightmode = 1 AND true_alt < 100 AND ship:velocity:surface:mag < TouchDownSpeed AND GroundSpeed < 1 {
-	    GEAR on.
-		lock steering to up.
-		lock throttle to .99*mass*-1*GravUp/availablethrust.
-		set flightmode to 2.
-	}
+	// If you are using this in tandem with Horizontal Landing then this will display where you are landing.
+	if SpotLanding {
+		set LandingVector to VECDRAW(LandingPosition:position,(altitude-LandingPosition:terrainheight+25)*(LandingPosition:position-R):normalized,GREEN,"Landing Position",1.0,TRUE,.5).
+		}
 	
 	if flightmode = 1 {
-	
+		if verticalspeed > 0 AND (AccelCent+GravUp) > 0  {
+			set ThrustSet to 1.
+			clearscreen.
+			print "Burning to Kill Speed, Centrifugal Acceleration too high".
+			wait until verticalspeed < 0.
+			clearscreen.
+			}
 		set error1 to error_v.
 		set t1 to time1.
 		wait .00001.
@@ -104,21 +96,28 @@ until flightmode = 2 AND ship:status = "LANDED" {
 			set ThrustSet to 1. // This is very important. If the error ever drops below 0, it means it might crash since the
 								// equation is calculated based on full thrust. 
 			}
-	}	
+	
+	}
+	// Cut off conditions for exiting the vertical landing
+	if flightmode = 1 AND true_alt < 100 AND ship:velocity:surface:mag < TouchDownSpeed AND GroundSpeed < 1 {
+	    GEAR on.
+		lock steering to up.
+		lock throttle to .99*mass*-1*GravUp/availablethrust.
+		set flightmode to 2.
+	}
 	// Some data readouts. Pay attention to the Error term, make sure it doesn't drop below 0.
 	
 	print "Vmax       = " + round(-1*Vmax,2) + "     "at(0,0).
-	print "VertSpeed  = " + round(verticalspeed,2) + "     " at (0,2).
-	print "Radar Alt  = " + round(true_alt,2) + "     " at(0,4).
-	print "Error Vert = " + round(error_v,2) + "     " at(0,6).
-	print "ThrustSet  = " + round(ThrustSet,2) + "     " at(0,8).
-	print "GravUp     = " + round(GravUp,2) + "     " at(0,10).
-	print "AccelCent  = " + round(AccelCent,2) + "     " at(0,12).
-	print "MaxThrustAccUp = " + round(MaxThrustAccUp,2) + "     " at(0,14).
-	print "MaxAccUp   = " + round(MaxAccUp,2) + "     " at (0,16).
-	print "FlightMode = " + flightmode + "     " at (0,18).
-	print "GroundSpeed= " + round(GroundSpeed,2) + "     " at (0,20).
-	//log round(time1,3) +","+ round(Vmax,2) +","+ -1*round(verticalspeed,2) +","+ round(true_alt,2) +","+ round(error_v,2) +","+ 100*round(ThrustSet,2) +","+ round(MaxAccUp,2) to landingdata.csv.
+	print "VertSpeed  = " + round(verticalspeed,2) + "     " at (0,1).
+	print "Radar Alt  = " + round(true_alt,2) + "     " at(0,2).
+	print "Error Vert = " + round(error_v,2) + "     " at(0,3).
+	print "ThrustSet  = " + round(ThrustSet,2) + "     " at(0,4).
+	print "GravUp     = " + round(GravUp,2) + "     " at(0,5).
+	print "AccelCent  = " + round(AccelCent,2) + "     " at(0,6).
+	print "MaxThrustAccUp = " + round(MaxThrustAccUp,2) + "     " at(0,7).
+	print "MaxAccUp   = " + round(MaxAccUp,2) + "     " at (0,8).
+	print "FlightMode = " + flightmode + "     " at (0,9).
+	print "GroundSpeed= " + round(GroundSpeed,2) + "     " at (0,10).
 	
 	}
 	
