@@ -5,14 +5,14 @@ declare parameter LandingPosition is latlng(0,0), SpotLanding is FALSE.
 clearscreen.
 // This sets some landing parameters such as determining what the true altiude is of the base of the rocket.
 set ship:control:pilotmainthrottle to 0.
-set TouchDownSpeed to 5. // This is set by the user, I set it to 5 since the landing legs break at 6.
+set TouchDownSpeed to 1. // This is set by the user, I set it to 5 since the landing legs break at 6.
 set MaxCount to 3. // Used to average the derivative term since it can get pretty eratic
 set buffer_alt to 20. // Its not perfect, so a little wiggle room is good to retract the legs.
 lock true_alt to altitude - ship:geoposition:terrainheight.// - start_alt. // Again measured from the bottom of the craft.
 // This script is meant to be used from a flat surface to launch and return. It can be adapted for landing from any situation.
 SAS off.
-GEAR OFF.
-set CutOffThrottle to 0.
+GEAR ON.
+set CutOffThrottle to 50.
 
 lock V to ship:velocity:orbit.
 lock R to ship:body:position.
@@ -28,7 +28,7 @@ lock MaxAccUp to MaxThrustAccUp + GravUp + AccelCent. // I opted out of adding d
 lock FPAsurf to 90 - VANG(UP:vector,ship:velocity:surface).
 
 clearscreen.
-lock Vmax to sqrt(MAX(0,2*(true_alt-buffer_alt)*MaxAccUp + TouchDownSpeed^2)).
+lock Vmax to sqrt(MAX(0,2*(true_alt)*MaxAccUp + TouchDownSpeed^2)).
 // The magic of the script. This equation is derived assuming an ascent starting at the touchdown speed and accelerating
 // at full throttle. It auto adjusts based on the altitude and the Max Acceleration as it changes with mass loss.
 // Basic PD loop. I want essentially no overshoot and very little error at the end. The Kp_v and Kd_v gains are tuned so at the finish
@@ -89,7 +89,7 @@ until flightmode = 2 AND ship:status = "LANDED" {
 		if ThrustSet > 1 {
 			set ThrustSet to 1.
 			}
-		if ThrustSet < CutOffThrottle {
+		if ThrustSet < CutOffThrottle/100 {
 			set ThrustSet to 0.
 			}
 		if error_v < 0 {
@@ -99,19 +99,25 @@ until flightmode = 2 AND ship:status = "LANDED" {
 	
 	}
 	// Cut off conditions for exiting the vertical landing
-	if flightmode = 1 AND true_alt < 100 AND ship:velocity:surface:mag < TouchDownSpeed AND GroundSpeed < 1 {
+	if flightmode = 1 AND true_alt < buffer_alt AND verticalspeed > -1*TouchDownSpeed AND GroundSpeed < 1 {
 	    GEAR on.
 		lock steering to up.
 		lock throttle to .99*mass*-1*GravUp/availablethrust.
 		set flightmode to 2.
 	}
+	if flightmode = 1 AND verticalspeed > -1*TouchDownSpeed AND GroundSpeed < 1 {	
+		GEAR on.
+		lock steering to up.
+		lock throttle to .99*mass*-1*GravUp/availablethrust.
+		set flightmode to 2.
+		}
 	// Some data readouts. Pay attention to the Error term, make sure it doesn't drop below 0.
 	
 	print "Vmax       = " + round(-1*Vmax,2) + "     "at(0,0).
 	print "VertSpeed  = " + round(verticalspeed,2) + "     " at (0,1).
 	print "Radar Alt  = " + round(true_alt,2) + "     " at(0,2).
 	print "Error Vert = " + round(error_v,2) + "     " at(0,3).
-	print "ThrustSet  = " + round(ThrustSet,2) + "     " at(0,4).
+	print "ThrustSet  = " + round(ThrustSet*100,2) + "%       " at(0,4).
 	print "GravUp     = " + round(GravUp,2) + "     " at(0,5).
 	print "AccelCent  = " + round(AccelCent,2) + "     " at(0,6).
 	print "MaxThrustAccUp = " + round(MaxThrustAccUp,2) + "     " at(0,7).
