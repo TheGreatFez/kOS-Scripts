@@ -1,5 +1,7 @@
+// This script is for matching inclination of a target around the same body
+
 clearscreen.
-print "Aligning to Burn Vector".
+
 set DV_tol to 0.1.
 set DA_tol to .01.
 for node in allnodes {remove node.}
@@ -47,7 +49,10 @@ lock delta_ang to VANG(Ship_angvel,Target_angvel).
 set delta_v_check to 2*(VELOCITYAT(ship,time:seconds + asc_node_eta):orbit:mag)*sin(delta_ang/2).
 lock Burn_dir to (-1*Ship_angvel):direction.
 lock steering to Burn_dir.
-wait 10.
+print "Aligning to Burn Vector".
+until VANG(ship:facing:vector,Burn_dir:vector) < 1 {
+	print "Direction Alignment Error = " + round(VANG(ship:facing:vector,Burn_dir:vector),1) + "   "at(0,1).
+}
 lock acc to maxthrust/mass.
 lock Burn_time to delta_v_check/acc.
 warpto(time:seconds + mynode:eta - Burn_time/2 - 15).
@@ -86,6 +91,7 @@ until delta_v_check < DV_tol {
 		set delta_ang_der to delta_ang_2-delta_ang_1.
 		if delta_ang_der > 0 {
 			set delta_ang_der_check to 1.
+			lock throttle to 0.
 			}
 		}
 	print "Delta V Left = " + round(delta_v_check,1) + "   " at(0,10).
@@ -95,6 +101,7 @@ until delta_v_check < DV_tol {
 	set Arrow1 to VECDRAW(ship:position,(Ship_angvel:normalized)*20,RGB(1,0,0),"Ship AngVel",1,TRUE,.5).
 	set Arrow2 to VECDRAW(ship:position,(Target_angvel:normalized)*20,RGB(0,1,0),"Target AngVel",1,TRUE,.5).
 	}
+lock throttle to 0.
 	
 if delta_v_check < DV_tol {
 	print "Delta V less than " + round(DV_tol,2) + "m/s" at(0,20).
@@ -102,4 +109,5 @@ if delta_v_check < DV_tol {
 	print "Broke because of increasing angle" at(0,20).
 	}
 clearvecdraws().
-remove allnodes.
+for node in allnodes{remove node.}
+wait 3.

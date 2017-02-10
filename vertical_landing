@@ -13,7 +13,13 @@ lock true_alt to altitude - ship:geoposition:terrainheight.// - start_alt. // Ag
 SAS off.
 GEAR ON.
 set CutOffThrottle to 50.
-
+if ship:body = Mun {
+	set buffer_terrain to 0.
+	}
+if ship:body = Duna {
+	set buffer_terrain to 10.
+	}
+	
 lock V to ship:velocity:orbit.
 lock R to ship:body:position.
 lock Vper to VDOT(VCRS(R,VCRS(V,R)):direction:vector,V).
@@ -28,7 +34,7 @@ lock MaxAccUp to MaxThrustAccUp + GravUp + AccelCent. // I opted out of adding d
 lock FPAsurf to 90 - VANG(UP:vector,ship:velocity:surface).
 
 clearscreen.
-lock Vmax to sqrt(MAX(0,2*(true_alt)*MaxAccUp + TouchDownSpeed^2)).
+lock Vmax to sqrt(MAX(0,2*(true_alt - buffer_terrain)*MaxAccUp + TouchDownSpeed^2)).
 // The magic of the script. This equation is derived assuming an ascent starting at the touchdown speed and accelerating
 // at full throttle. It auto adjusts based on the altitude and the Max Acceleration as it changes with mass loss.
 // Basic PD loop. I want essentially no overshoot and very little error at the end. The Kp_v and Kd_v gains are tuned so at the finish

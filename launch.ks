@@ -3,6 +3,14 @@ set ship:control:pilotmainthrottle to 0.
 clearscreen.
 set circstage to 3.
 
+declare function Circularize_apo{
+	set Vapo_cir to sqrt(ship:body:mu/(ship:body:radius + apoapsis)).
+	set DeltaV to  Vapo_cir - VELOCITYAT(ship,time:seconds + eta:apoapsis):orbit:mag.
+	set CirPer to NODE(TIME:seconds + eta:apoapsis, 0, 0, DeltaV).
+	ADD CirPer.
+	ExecuteNode().
+	}
+	
 set flightmode to 0.
 set compass to 90.
 //set OrbitAlt to 100000.
@@ -70,7 +78,7 @@ until flightmode = 3 {
 clearscreen. 
 print "Coasting until out of Atmosphere".
 wait until altitude > 70000.
-run CircularizeAP.
+Circularize_apo().
 
 set finishtime to time:seconds.
 set totaltime to finishtime - starttime.

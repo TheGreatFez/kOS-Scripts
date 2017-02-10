@@ -1,0 +1,10 @@
+lock steering to prograde.
+wait 5.
+lock accel to VDOT(ship:facing:vector, ship:sensors:acc - ship:sensors:grav).
+clearscreen.
+set ship:control:fore to 1.
+until false {
+  set thrust to (accel*mass)/4.
+  print "accel = " + round(accel,2) at(0,0).
+  print "thrust = " + round(thrust,2) at (0,1).
+}

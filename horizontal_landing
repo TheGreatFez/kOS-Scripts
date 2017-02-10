@@ -40,14 +40,23 @@ declare function ExecuteNode {
 CLEARVECDRAWS().
 SAS OFF.
 lock steering to srfretrograde.
-set landing_pos to LATLNG(0,90).// Where you want to land, currently can only be at 0 lattitude
+set landing_pos to LATLNG(0,-74.5576).// Where you want to land, currently can only be at 0 lattitude
 set g0 to ship:body:mu/(ship:body:radius)^2.
 set TWR to availablethrust/(mass*g0).
 set Fuel_Factor to 1.25.
 //set landing_per_buffer to 500. 	// How high above the landing postion do you want the periapsis of the transfer orbit to be. 
 								// NOTE: If this is too low your ship might crash because it starts to drop as it looses horizontal speed.
 								// 500m worked very well for my test ship which had a starting Mun TWR of 5.91
-set landing_per_buffer to (50290*(TWR*Fuel_Factor)^(-2.232) + 222.1)*(0.955)^(landing_pos:terrainheight/2500).
+if ship:body = Mun {
+	set landing_per_buffer to (50290*(TWR*Fuel_Factor)^(-2.232) + 222.1)*(0.955)^(landing_pos:terrainheight/2500).
+	}
+if ship:body = Kerbin {
+	set landing_per_buffer to 40000.
+	}
+if ship:body = Duna {
+	set landing_per_buffer to 20000.
+	}
+	
 
 lock R_ship to ship:body:position.
 lock angle_diff_h to VANG(-R_ship, landing_pos:position - R_ship).
@@ -59,7 +68,7 @@ lock speed_diff_h to Speed_h-position_speed_h. // Converstion of the difference 
 clearscreen.
 
 // Calculte and set the maneuver node. The periapsis will be the preset landing periapsis buffer altitude above the ground at the landing point.
-set R_per_landing to ship:body:radius + max(4500,landing_pos:terrainheight + landing_per_buffer).
+set R_per_landing to ship:body:radius + max(4500*(ship:body:radius/Mun:radius),landing_pos:terrainheight + landing_per_buffer).
 set SMA_landing to (R_ship:mag + R_per_landing)/2.
 set ecc_landing to (R_ship:mag - R_per_landing)/(R_ship:mag + R_per_landing).
 set V_apo to sqrt(((1-ecc_landing)*ship:body:MU)/((1+ecc_landing)*SMA_landing)).
@@ -90,7 +99,7 @@ ExecuteNode().
 // I have no idea why I have to retype all the variables I defined earlier but if I don't it gives me some strange errors that the variables aren't defined.
 // If anyone would like to help, you can comment from the next line to the "End of the commenting section" and try and run it. I hope you get the same error, and know how to fix it!
 lock steering to srfretrograde.
-set landing_pos to LATLNG(0,90).
+set landing_pos to LATLNG(0,-74.5576).
 
 set buffer_speed_h to 0.
 set cutoffspeed_h to 25.
@@ -104,6 +113,9 @@ lock dist_diff_h to (angle_diff_h/360)*2*(constant:pi)*R_ship:mag.
 lock Velocity_h_norm to VCRS(VCRS(R_ship,ship:velocity:orbit),R_ship):normalized.
 lock Speed_h to VDOT(Velocity_h_norm,ship:velocity:orbit).
 lock speed_diff_h to Speed_h-landing_pos:altitudevelocity(altitude):orbit:mag.
+lock long_diff_dir to VCRS(landing_pos:position,R_ship):normalized.
+lock long_diff_h to VDOT(long_diff_dir,ship:velocity:surface).
+lock Velocity_diff_direction to (-1*(ship:velocity:orbit - landing_pos:altitudevelocity(altitude):orbit + long_diff_h*long_diff_dir)):direction.
 clearscreen.
 // End of error commenting section.
 // This is the heart of the function. The max horizontal acceleration is calculated as if the rocket is always in surface retrograde. 
@@ -141,11 +153,25 @@ clearscreen.
 set landing_eta_buffer to velocityat(ship,time:seconds + eta:periapsis):orbit:mag/(TWR*g0).
 print "Warping to " + round(landing_eta_buffer,0) + "sec before Periapsis".
 warpto(time:seconds + eta:periapsis - 1.075*landing_eta_buffer).
+
+set follow_mode to 1.
 lock steering to srfretrograde.
 clearscreen.
 until flightmode = 2 {
+	if follow_mode = 1 {
+		if ship:body:atm:exists {
+			if ThrustSet > 0 {
+			lock steering to Velocity_diff_direction.
+			set follow_mode to 2.
+			}
+		} else {
+			lock steering to Velocity_diff_direction.
+			set follow_mode to 2.
+			}
+	}
 	// A visual aid to show where the ship is supposed to land.
 	set LandingVector to VECDRAW(landing_pos:position,(altitude-landing_pos:terrainheight+25)*(landing_pos:position-R_ship):normalized,GREEN,"Landing Position",1.0,TRUE,.5).
+	set SideslipVector to VECDRAW(V(0,0,0),10*long_diff_h*long_diff_dir,GREEN,"Sideslip Component",1.0,TRUE,.5).
 	if flightmode = 1 {
 		// Main PD loop for the thrust control
 		set error1_h to error_h.
@@ -179,7 +205,7 @@ until flightmode = 2 {
 		if ThrustSet > 1 {
 			set ThrustSet to 1.
 			}
-		if dist2 > dist1 {
+		if dist2 > dist1 AND ship:obt:trueanomaly < 90 {
 			set ThrustSet to 1.
 			}
 		// The Cut Off Thrust is used to help maximize efficiency. At 0 it is a nice smooth ramp up but if you make the fuel cut off higher it only turns on when its above this value and thus increases efficiency
@@ -212,5 +238,7 @@ until flightmode = 2 {
 	print "Flightmode = " + flightmode at(0,8).
 	print "cutoffdist_h = " + round(cutoffdist_h,2) + "      " at(0,9).
 	print "Distance to target cutoff = " + round(cutoffdist_h - dist_diff_h,2) + "       " at(0,10).
+	print "follow_mode = " + follow_mode at(0,11).
+	print "long_diff_h = " + round(long_diff_h,2) + "      " at(0,12).
 	}
 	run vertical_landing(landing_pos,TRUE).
