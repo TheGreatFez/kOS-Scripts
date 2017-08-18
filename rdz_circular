@@ -1,4 +1,4 @@
-// This script calculates a Maneuver Node to intercept a target. It is assumed both target and ship are in near circular orbits
+// This script calculates a Maneuver Node to intercept a target vessel. It is assumed both target and ship are in near circular orbits
 clearscreen.
 for node in allnodes {remove node.}
 
@@ -39,6 +39,7 @@ declare function Circularize_per{
 	set DeltaV to  Vper_cir - VELOCITYAT(ship,time:seconds + eta:periapsis):orbit:mag.
 	set CirPer to NODE(TIME:seconds + eta:periapsis, 0, 0, DeltaV).
 	ADD CirPer.
+	wait 1.
 	ExecuteNode().
 	}
 declare function Circularize_apo{
@@ -46,6 +47,7 @@ declare function Circularize_apo{
 	set DeltaV to  Vapo_cir - VELOCITYAT(ship,time:seconds + eta:apoapsis):orbit:mag.
 	set CirPer to NODE(TIME:seconds + eta:apoapsis, 0, 0, DeltaV).
 	ADD CirPer.
+	wait 1.
 	ExecuteNode().
 	}
 set R1 to ship:orbit:semimajoraxis.
@@ -196,7 +198,7 @@ if (T_burn+T_trans/2) < min(WaitTime_B,WaitTime_C) {
 //print "Phase_burn_test = " + round(Phase_burn_test).
 lock Target_angvel to VCRS(target:velocity:orbit,(target:position-Kerbin:position)):normalized.
 
-lock PlaneAngDiff to VANG(Ship_angvel,Target_angvel).
+set PlaneAngDiff to VANG(Ship_angvel,Target_angvel).
 if PlaneAngDiff < 0.01 {
 	set mynode to NODE(TIME:seconds + node_eta_sel, 0, 0, Delta_V).
 	ADD mynode.
@@ -208,7 +210,7 @@ if PlaneAngDiff < 0.01 {
 	clearscreen.
 	print "WARNING: Inclination Difference greater than 0.01 degrees!".
 	wait 3.
-	}
+}
 ExecuteNode().
 clearscreen.
 print "Setting Up Maneuver Node at Intercept Point".

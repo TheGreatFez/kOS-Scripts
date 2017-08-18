@@ -4,7 +4,7 @@ set a to ship:orbit:semimajoraxis.
 set u to ship:body:MU.
 set R to ship:body:radius.
 
-set Vper to sqrt(((1 + e)*u)/((1 - e)*a)).
+set Vper to VELOCITYAT(ship,time:seconds + eta:periapsis):orbit:mag.
 
 set a_new to (R_new + periapsis)/2 + R.
 

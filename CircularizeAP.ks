@@ -6,7 +6,7 @@ set a to ship:orbit:semimajoraxis.
 set Ra to ship:body:radius + apoapsis.
 
 lock Vcir to sqrt(ship:body:MU/ship:body:position:mag)*VCRS(Vper,UP:vector).
-set Vperp to sqrt(((1-e)*u)/((1+e)*a)).
+set Vperp to VELOCITYAT(ship,time:seconds + eta:periapsis):orbit:mag.
 set Vcir_pe to sqrt(u/(Ra)).
 lock DeltaV to Vcir - velocity:orbit.
 set DeltaV_time to abs(Vcir_pe - Vperp).
@@ -27,6 +27,7 @@ until DeltaV:mag < .1 AND flightmode = 1 {
         set flightmode to 1.
     }
 }
+lock throttle to 0.
 clearscreen.
 print "Finished Circularization".
 wait 1.

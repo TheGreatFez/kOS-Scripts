@@ -18,5 +18,9 @@ until PlaneAngDiff < 0.01 OR i >= max_iter{
 clearscreen.
 print "Inclination Match Complete".
 wait 3.
-run rdz_circular.
+if target:istype("Body") {
+	run rdz_body.
+} else {
+	run rdz_circular.
+}
 //run rdz_man.
