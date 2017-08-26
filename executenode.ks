@@ -3,7 +3,7 @@ lock throttle to 0.
 SAS off.
 lock DeltaV to nextnode:deltav:mag.
 set BurnTime to .5*DeltaV*mass/availablethrust.
-lock steering to nextnode.
+lock steering to LOOKDIRUP(nextnode:burnvector,facing:topvector).
 print "Aligning with Maneuver Node".
 until VANG(ship:facing:vector,nextnode:burnvector) < 1 {
 	print "Direction Angle Error = " + round(VANG(ship:facing:vector,nextnode:burnvector),1) + "   "at(0,1).
