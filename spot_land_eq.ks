@@ -63,15 +63,17 @@ declare function S_throttle_func {
 	local V_per to VCRS(R,V_side):normalized.
 	local T_vec to VCRS(R,VCRS(landing_pos:position,R)):normalized.
 	//local S_throttle_output to VDOT(V_side,(T_vec*S - V_per*S))/S.
-	local delta_v to VDOT(V_side,(T_vec*S - V_per*S)).
-	local S_throttle_output to (delta_v*mass)/(availablethrust*t_0).
+	local delta_v to -1*VDOT(V_side,(T_vec*S - V_per*S)).
+	//local S_throttle_output to (delta_v*mass)/(availablethrust*t_0).
 	//local ang to VANG(V_per,T_vec).
 	//local delta_v to 2*S*sin(ang/2).y
-	return S_throttle_output.
+	//return S_throttle_output.
+	return delta_v.
 }
 
 lock R to ship:body:position.
 lock V_surf to ship:velocity:surface.
+lock g to ship:body:mu/(R:mag^2).
 lock Velocity_h_norm to VCRS(VCRS(R,landing_pos:position),R):normalized.
 lock Speed_h to VDOT(Velocity_h_norm,ship:velocity:surface).
 lock speed_diff_h to Speed_h-landing_pos:altitudevelocity(altitude):orbit:mag.
@@ -81,12 +83,12 @@ lock H_vec to VCRS(R,VCRS(V_surf,R)):normalized.
 lock S_vec to -1*VCRS(V_surf,R):normalized.
 
 set KP_V to .01.
-set KD_V to 0.04.
+set KD_V to 0.001.
 set V_throttle_PID to PIDLOOP(KP_V,0,KD_V,0,1).
 set V_throttle_PID:setpoint to Vmax_v().
 
 set KP_H to .01.
-set KD_H to 0.005.//0.02.
+set KD_H to 0.002.//0.02.
 set H_throttle_PID to PIDLOOP(KP_H,0,KD_H,-1,1).
 set H_throttle_PID:setpoint to Vmax_h().
 
@@ -99,9 +101,12 @@ lock steering to throttle_vec:direction.
 
 clearscreen.
 
+set touchdown_speed to -5.
+set alt_cutoff to 100.
+
 set throttle_hyst to false.
 set throttle_hyst_UL to 50.
-set throttle_hyst_LL to 25.
+set throttle_hyst_LL to 5.
 
 set ang_hyst to false.
 set ang_hyst_UL to 20.
@@ -109,9 +114,9 @@ set ang_hyst_LL to 10.
 
 set left_over_flag to false.
 
-set LandingVector to VECDRAW(R:mag*(landing_pos:position - R):normalized,R,GREEN,"Landing Position",1.0,TRUE,.5).
-set LandingVector:vectorupdater to { return R:mag*(landing_pos:position - R):normalized.}.
-set LandingVector:startupdater to { return R.}.
+set LandingVector to VECDRAW((radar:alt)*(landing_pos:position - R):normalized,landing_pos:position,GREEN,"Landing Position",1.0,TRUE,.5).
+set LandingVector:vectorupdater to { return (radar:alt)*(landing_pos:position - R):normalized.}.
+set LandingVector:startupdater to { return landing_pos:position.}.
 
 set LandingPositionVector to VECDRAW(V(0,0,0),landing_pos:position,RED,"Landing Vector",1.0,TRUE,.5).
 set LandingPositionVector:vectorupdater to { return landing_pos:position.}.
@@ -127,26 +132,34 @@ until false {
 	set V_throttle_PID:setpoint to Vmax_v().
 	set H_throttle_PID:setpoint to Vmax_h().
 	
-	set V_throttle to MIN(1,1-V_throttle_PID:update(time:seconds,-1*verticalspeed)).
-	
-	if groundspeed < 2.5 {
-		set H_throttle to 0.
+	if verticalspeed > touchdown_speed AND alt:radar < alt_cutoff {
+		set V_throttle to (1-(touchdown_speed-verticalspeed)/touchdown_speed)*mass*g/availablethrust.
 	} else {
-		set H_throttle to MIN(1,1-H_throttle_PID:update(time:seconds,Speed_h)).
+		set V_throttle to MIN(1,1-V_throttle_PID:update(time:seconds,-1*verticalspeed)).
 	}
 	
-	set S_throttle to S_throttle_func().
-	if (V_throttle^2 + H_throttle^2 + S_throttle^2) > 1 {
+	if groundspeed < 2.5 {
+		set H_throttle_test to 0.
+	} else {
+		set H_throttle_test to MIN(1,1-H_throttle_PID:update(time:seconds,Speed_h)).
+	}
+	
+	set S_deltaV to S_throttle_func().
+	set S_throttle_test to (S_deltaV*mass)/(availablethrust*1).
+	if (V_throttle^2 + H_throttle_test^2 + S_throttle_test^2) > 1 {
 		set left_over_flag to True.
 		set left_over to 1- V_throttle^2.
-		if H_throttle > sqrt(left_over) {
-			set H_throttle to sqrt(left_over).
+		if H_throttle_test > sqrt(left_over) {
+			set H_throttle to MAX(0,MIN(H_throttle_test,sqrt(left_over))).
 			set S_throttle to 0.
 		} else {
-			set S_throttle to sqrt(left_over - H_throttle^2).
+			set H_throttle to H_throttle_test.
+			set S_throttle to MAX(0,MIN(S_throttle_test,sqrt(left_over - H_throttle_test^2))).
 		}
 	} else {
 		set left_over_flag to False.
+		set S_throttle to S_throttle_test.
+		set H_throttle to H_throttle_test.
 	}
 		
 	set throttle_vec to V_vec*V_throttle - H_vec*H_throttle + S_vec*S_throttle.
@@ -166,8 +179,8 @@ until false {
 		lock steering to LOOKDIRUP(retrograde:vector,facing:topvector).
 	}
 	
-	print "V_throttle = " + round(100*(1-V_throttle_PID:output),0) + "%   "at(0,0).
-	print "H_throttle = " +round(100*(1-H_throttle_PID:output),0) + "%   " at(0,1).
+	print "V_throttle = " + round(100*(V_throttle),0) + "%   "at(0,0).
+	print "H_throttle = " +round(100*(H_throttle),0) + "%   " at(0,1).
 	print "S_throttle = " +round(100*S_throttle,0) + "%   " at(0,2).
 	print "Vmax_v = " +round(Vmax_v,2) at(0,3).
 	print "Vspeed = " +round(verticalspeed,2) at(0,4).
@@ -179,6 +192,8 @@ until false {
 	print "left_over_flag = " + left_over_flag + "   " at(0,10).
 	print "ang_diff = " + round(ang_diff,1) + "   " at(0,11).
 	print "ang_hyst = " + ang_hyst + "   " at(0,12).
+	print "S_deltaV = " + round(S_deltaV,2) + "   " at(0,13).
+	print "groundspeed = " + round(groundspeed,2) + "   " at(0,14).
 	
 	wait 0.
 }
