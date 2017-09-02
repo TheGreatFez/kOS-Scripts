@@ -19,7 +19,7 @@ declare function Hysteresis {
 }
 
 declare function Vmax_v {
-	declare parameter buffer_terrain is 10, TouchDownSpeed is 5.
+	declare parameter buffer_terrain is 0, TouchDownSpeed is 5.
 	local true_alt to altitude - ship:geoposition:terrainheight.
 	local V to ship:velocity:orbit.
 	local R to ship:body:position.
@@ -29,18 +29,18 @@ declare function Vmax_v {
 	local GravUp to (-1)*(ship:body:mu)/((R:mag)^2).
 	local MaxAccUp to MaxThrustAccUp + GravUp + AccelCent.
 	local FPAsurf to 90 - VANG(UP:vector,ship:velocity:surface).
-	local Vmax to sqrt(MAX(0,2*(true_alt - buffer_terrain)*MaxAccUp + TouchDownSpeed^2)).
+	local Vmax to sqrt(MAX(0,2*(true_alt - buffer_terrain)*MaxAccUp - TouchDownSpeed^2)).
 	return Vmax.
 }
 
 declare function Vmax_h {
-	declare parameter buffer_dist is 10.
+	declare parameter  buffer_dist is 0.
 	local R to ship:body:position.
 	local V to ship:velocity:orbit.
 	local MaxThrustAccHor to availablethrust/mass.
 	local angle_diff_h to VANG(-R, landing_pos:position - R).
 	local dist_diff_h to (angle_diff_h/360)*2*(constant:pi)*R:mag.
-	local Vmax to sqrt(MAX(0,2*(dist_diff_h - buffer_dist)*MaxThrustAccHor)).
+	local Vmax to sqrt(MAX(0.001,2*(dist_diff_h - buffer_dist)*MaxThrustAccHor)).
 	
 	local dir_check_vel to VCRS(V,R).
 	local dir_check_pos to VCRS(-R,landing_pos:position-R).
@@ -53,6 +53,16 @@ declare function Vmax_h {
 	
 	return dir_check*Vmax.
 }
+declare function Follow_throttle_func {
+	local R to ship:body:position.
+	local V to ship:velocity:surface.
+	local V_ref to (V:mag)*(landing_pos:position:normalized).
+	local h to altitude - landing_pos:terrainheight. // used to adjust the V_ref later
+	local V_diff to V_ref - V.
+	local throttle_sel to (V_diff*mass)/availablethrust.
+	
+	return throttle_sel.
+}
 
 declare function S_throttle_func {
 	declare parameter t_0 is 1.
@@ -62,12 +72,8 @@ declare function S_throttle_func {
 	local V_side to VCRS(V,R):normalized.
 	local V_per to VCRS(R,V_side):normalized.
 	local T_vec to VCRS(R,VCRS(landing_pos:position,R)):normalized.
-	//local S_throttle_output to VDOT(V_side,(T_vec*S - V_per*S))/S.
 	local delta_v to -1*VDOT(V_side,(T_vec*S - V_per*S)).
-	//local S_throttle_output to (delta_v*mass)/(availablethrust*t_0).
-	//local ang to VANG(V_per,T_vec).
-	//local delta_v to 2*S*sin(ang/2).y
-	//return S_throttle_output.
+	
 	return delta_v.
 }
 
@@ -77,13 +83,14 @@ lock g to ship:body:mu/(R:mag^2).
 lock Velocity_h_norm to VCRS(VCRS(R,landing_pos:position),R):normalized.
 lock Speed_h to VDOT(Velocity_h_norm,ship:velocity:surface).
 lock speed_diff_h to Speed_h-landing_pos:altitudevelocity(altitude):orbit:mag.
+lock true_alt to altitude - ship:geoposition:terrainheight.
 
 lock V_vec to UP:vector.
 lock H_vec to VCRS(R,VCRS(V_surf,R)):normalized.
 lock S_vec to -1*VCRS(V_surf,R):normalized.
 
 set KP_V to .01.
-set KD_V to 0.001.
+set KD_V to 0.005.
 set V_throttle_PID to PIDLOOP(KP_V,0,KD_V,0,1).
 set V_throttle_PID:setpoint to Vmax_v().
 
@@ -99,23 +106,27 @@ set throttle_vec to V_vec*V_throttle_PID:update(time:seconds,-1*verticalspeed) +
 
 lock steering to throttle_vec:direction.
 
+lock land_surf to VANG(landing_pos:position,ship:velocity:surface).
+
 clearscreen.
 
 set touchdown_speed to -5.
 set alt_cutoff to 100.
 
 set throttle_hyst to false.
-set throttle_hyst_UL to 50.
-set throttle_hyst_LL to 5.
+set throttle_hyst_UL to 75.
+set throttle_hyst_LL to 1.
 
 set ang_hyst to false.
 set ang_hyst_UL to 20.
 set ang_hyst_LL to 10.
 
 set left_over_flag to false.
+set Follow_Mode to false.
+set TouchDown_Mode to false.
 
-set LandingVector to VECDRAW((radar:alt)*(landing_pos:position - R):normalized,landing_pos:position,GREEN,"Landing Position",1.0,TRUE,.5).
-set LandingVector:vectorupdater to { return (radar:alt)*(landing_pos:position - R):normalized.}.
+set LandingVector to VECDRAW((alt:radar)*(landing_pos:position - R):normalized,landing_pos:position,GREEN,"Landing Position",1.0,TRUE,.5).
+set LandingVector:vectorupdater to { return (altitude-landing_pos:terrainheight)*(landing_pos:position - R):normalized.}.
 set LandingVector:startupdater to { return landing_pos:position.}.
 
 set LandingPositionVector to VECDRAW(V(0,0,0),landing_pos:position,RED,"Landing Vector",1.0,TRUE,.5).
@@ -126,23 +137,25 @@ set SurfaceVelocity to VECDRAW(V(0,0,0),ship:velocity:surface,BLUE,"Surface Velo
 set SurfaceVelocity:vectorupdater to { return ship:velocity:surface.}.
 set SurfaceVelocity:startupdater to { return V(0,0,0).}.
 
-until false {
+until ship:status = "LANDED" {
 	
 	
 	set V_throttle_PID:setpoint to Vmax_v().
 	set H_throttle_PID:setpoint to Vmax_h().
+	if verticalspeed > touchdown_speed AND true_alt < alt_cutoff AND not(TouchDown_Mode){
+		set TouchDown_Mode to True.
+	}
 	
-	if verticalspeed > touchdown_speed AND alt:radar < alt_cutoff {
+	if TouchDown_Mode{
 		set V_throttle to (1-(touchdown_speed-verticalspeed)/touchdown_speed)*mass*g/availablethrust.
+		GEAR ON.
 	} else {
 		set V_throttle to MIN(1,1-V_throttle_PID:update(time:seconds,-1*verticalspeed)).
+		GEAR OFF.
 	}
 	
-	if groundspeed < 2.5 {
-		set H_throttle_test to 0.
-	} else {
-		set H_throttle_test to MIN(1,1-H_throttle_PID:update(time:seconds,Speed_h)).
-	}
+	set H_throttle_test to MIN(1,1-H_throttle_PID:update(time:seconds,Speed_h)).
+	//set H_throttle_test to H_throttle_func().
 	
 	set S_deltaV to S_throttle_func().
 	set S_throttle_test to (S_deltaV*mass)/(availablethrust*1).
@@ -161,8 +174,16 @@ until false {
 		set S_throttle to S_throttle_test.
 		set H_throttle to H_throttle_test.
 	}
-		
-	set throttle_vec to V_vec*V_throttle - H_vec*H_throttle + S_vec*S_throttle.
+	
+	if groundspeed < 10 AND not(Follow_Mode) {
+		set Follow_Mode to True.
+	}
+	
+	if Follow_Mode {
+		set throttle_vec to V_vec*V_throttle + Follow_throttle_func().
+	} else {
+		set throttle_vec to V_vec*V_throttle - H_vec*H_throttle + S_vec*S_throttle.
+	}
 	set ang_diff to VANG(throttle_vec,ship:facing:vector).
 	set throttle_hyst to Hysteresis(100*throttle_vec:mag,throttle_hyst, throttle_hyst_UL, throttle_hyst_LL).
 	set ang_hyst to Hysteresis(ang_diff,ang_hyst,ang_hyst_UL,ang_hyst_LL,False).
@@ -176,12 +197,12 @@ until false {
 		}
 	} else {
 		lock throttle to 0.
-		lock steering to LOOKDIRUP(retrograde:vector,facing:topvector).
+		lock steering to LOOKDIRUP(srfretrograde:vector,facing:topvector).
 	}
 	
-	print "V_throttle = " + round(100*(V_throttle),0) + "%   "at(0,0).
-	print "H_throttle = " +round(100*(H_throttle),0) + "%   " at(0,1).
-	print "S_throttle = " +round(100*S_throttle,0) + "%   " at(0,2).
+	print "V_throttle = " + round(100*(VDOT(V_vec,throttle_vec)),0) + "%   "at(0,0).
+	print "H_throttle = " +round(100*(VDOT(H_vec,throttle_vec)),0) + "%   " at(0,1).
+	print "S_throttle = " +round(100*(VDOT(S_vec,throttle_vec)),0) + "%   " at(0,2).
 	print "Vmax_v = " +round(Vmax_v,2) at(0,3).
 	print "Vspeed = " +round(verticalspeed,2) at(0,4).
 	print "Vmax_h = " +round(Vmax_h,2) at(0,5).
@@ -194,6 +215,13 @@ until false {
 	print "ang_hyst = " + ang_hyst + "   " at(0,12).
 	print "S_deltaV = " + round(S_deltaV,2) + "   " at(0,13).
 	print "groundspeed = " + round(groundspeed,2) + "   " at(0,14).
+	print "land_surf = " + round(land_surf,2) + "   " at(0,15).
+	print "Follow_Mode = " + Follow_Mode + "   " at(0,16).
+	print "TouchDown_Mode = " + TouchDown_Mode + "   " at(0,17).
+	
 	
 	wait 0.
 }
+lock throttle to 0.
+SAS ON.
+wait 5.
