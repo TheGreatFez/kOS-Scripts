@@ -1,4 +1,4 @@
-declare parameter LandingPeriapsis,CutOffSpeed,CutOffThrottle.
+declare parameter LandingPeriapsis is 10000,CutOffSpeed is 25,CutOffThrottle is 0.
 clearscreen.
 // This sets some pre launch parameters such as determining what the true altiude is of the base of the rocket.
 set ship:control:pilotmainthrottle to 0.
