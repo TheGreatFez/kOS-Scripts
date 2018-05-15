@@ -17,10 +17,16 @@ wait until BurnTime >= nextnode:eta.
 clearscreen.
 lock throttle to DeltaV*mass/availablethrust.
 print "Executing Node".
+local runmode is 1.
 
-until DeltaV <= .1 {
-	print "Delta V = " + round(DeltaV,1) + "   " at(0,1).
+until DeltaV <= .01 {
+	print "Delta V = " + round(DeltaV,2) + "   " at(0,1).
 	print "Throttle = " + MIN(100,round(throttle*100)) + "%   " at(0,2).
+	if runmode = 1 AND DeltaV < 0.5 {
+		lock throttle to DeltaV*mass/(2*availablethrust).
+		set runmode to 2.
+	}
+	wait 0.
 }
 lock throttle to 0.
 unlock all.
