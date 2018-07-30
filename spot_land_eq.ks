@@ -1,12 +1,18 @@
 // Script to do a spot landing on equatorial trajectory.
-//set landing_pos to LATLNG(2,140).
+set landing_pos to LATLNG(5,120).
 //set landing_pos to LATLNG(-0.09720767,-74.557677).
 
 SAS OFF.
 run executenode.
 wait 3.
-warpto(time:seconds + eta:periapsis).
-declare function Hysteresis {
+set max_acc to maxthrust/mass.
+set peri_v to velocityat(ship,time:seconds + eta:periapsis):orbit:mag.
+set delta_time to peri_v/max_acc.
+clearscreen.
+clearvecdraws().
+
+warpto(time:seconds + eta:periapsis - 2*delta_time).
+function Hysteresis {
 	declare parameter input,prev_output, right_hand_limit, left_hand_limit,right_hand_output is true.
 	set output to prev_output.
 	if prev_output = right_hand_output {
@@ -21,7 +27,7 @@ declare function Hysteresis {
 	return output.
 }
 
-declare function Vmax_v {
+function Vmax_v {
 	declare parameter buffer_terrain is 0, TouchDownSpeed is 5.
 	local true_alt to altitude - ship:geoposition:terrainheight.
 	local V to ship:velocity:orbit.
@@ -36,7 +42,7 @@ declare function Vmax_v {
 	return Vmax.
 }
 
-declare function Vmax_h {
+function Vmax_h {
 	declare parameter  buffer_dist is 0.
 	local R to ship:body:position.
 	local V to ship:velocity:orbit.
@@ -56,7 +62,8 @@ declare function Vmax_h {
 	
 	return dir_check*Vmax.
 }
-declare function Follow_throttle_func {
+
+function Follow_throttle_func {
 	local R to ship:body:position.
 	local V to ship:velocity:surface.
 	local V_ref to (V:mag)*(landing_pos:position:normalized).
@@ -67,7 +74,7 @@ declare function Follow_throttle_func {
 	return throttle_sel.
 }
 
-declare function S_throttle_func {
+function S_throttle_func {
 	declare parameter t_0 is 1.
 	local R to ship:body:position.
 	local V to ship:velocity:surface.
@@ -117,7 +124,7 @@ set touchdown_speed to -5.
 set alt_cutoff to 100.
 
 set throttle_hyst to false.
-set throttle_hyst_UL to 75.
+set throttle_hyst_UL to 25.
 set throttle_hyst_LL to 1.
 
 set ang_hyst to false.
@@ -184,8 +191,8 @@ until ship:status = "LANDED" {
 		set S_throttle to S_throttle_test.
 		set H_throttle to H_throttle_test.
 	}
-	set Follow_Mode_Ang to VANG(landing_pos:altitudeposition(altitude),landing_pos:position).
-	if Follow_Mode_Ang >70 {
+	set Follow_Mode_Ang to VANG(landing_pos:position,ship:velocity:surface).
+	if Follow_Mode_Ang <15 {
 		set Follow_Mode to True.
 	}
 	if groundspeed < 10 AND not(Follow_Mode) {
@@ -198,14 +205,15 @@ until ship:status = "LANDED" {
 		set throttle_vec to V_vec*V_throttle - H_vec*H_throttle + S_vec*S_throttle.
 	}
 	
-	set throttle_hyst_test to sqrt(V_throttle^2 + H_throttle^2).
+	set throttle_hyst_test to throttle_vec:mag.
 	set ang_diff to VANG(throttle_vec,ship:facing:vector).
 	set throttle_hyst to Hysteresis(100*throttle_hyst_test,throttle_hyst, throttle_hyst_UL, throttle_hyst_LL).
 	set ang_hyst to Hysteresis(ang_diff,ang_hyst,ang_hyst_UL,ang_hyst_LL,False).
 	
 	if throttle_hyst {
 		if ang_hyst {
-			lock throttle to throttle_vec:mag.			lock steering to LOOKDIRUP(throttle_vec,facing:topvector).
+			lock throttle to throttle_vec:mag.
+			lock steering to LOOKDIRUP(throttle_vec,facing:topvector).
 		} else {
 			lock throttle to 0.
 			lock steering to LOOKDIRUP(throttle_vec,facing:topvector).
@@ -235,6 +243,7 @@ until ship:status = "LANDED" {
 	print "TouchDown_Mode = " + TouchDown_Mode + "   " at(0,17).
 	print "S_throttle_enable = " + S_throttle_enable + "   " at(0,18).
 	print "S_throttle_test = " + round(S_throttle_test,2) + "   " at(0,19).
+	print "throttle_hyst_test = " + round(throttle_hyst_test,2) + "   " at(0,20).
 	
 	
 	wait 0.
