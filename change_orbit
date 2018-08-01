@@ -29,130 +29,49 @@ function Change_LAN_Inc {
 	
 	local LAN_node to SetNode_BurnVector(time:seconds + LAN_eta,New_Vel_at_LAN).
 	add LAN_node.
-	local burn_vector to New_Vel_at_LAN - Vel_at_LAN.
-	local delta_v_node to burn_vector:mag.
 	
-	local max_acc to availablethrust/mass.
-	local burn_time to delta_v_node/max_acc.
 	
-	lock steering to LOOKDIRUP(burn_vector,ship:facing:upvector).
-	clearscreen.
-	
-	set facing_ang_diff to VANG(burn_vector,ship:facing:forevector).
-	print "Aligning to Burn Vector".
-	until facing_ang_diff < 1 {
-		set facing_ang_diff to VANG(burn_vector,ship:facing:forevector).
-		print "Direction Alignment Error = " + round(facing_ang_diff,1) + "    " at(0,1).
-	}
-	clearscreen.
-	print "Alignment Complete".
-	print "Warping to Burn Point".
-	wait 2.
-	warpto(time:seconds + LAN_node:eta - burn_time/2 - 20).
-	
-	wait until warp <= 0.
-	clearscreen.
-	until false {
-		set burn_vector to New_Vel_at_LAN - ship:velocity:orbit.
-		set delta_v to burn_vector:mag.
-		//set LAN_eta_burn to ETA_to_theta(LAN_relative_theta).
-		if LAN_node:eta > burn_time/2 {
-			local INC_diff to abs(DesiredOrbit["INC"] - ship:orbit:inclination).
-			local LAN_diff to abs(DesiredOrbit["LAN"] - ship:orbit:LAN).
-			print "ETA to Burn = " + round(LAN_node:eta - burn_time/2,2) + "    " at(0,1).
-			print "DeltaV      = " + round(delta_v,2) + "    " at(0,2).
-			print "Ship's LAN  = " + round(ship:orbit:LAN,2) + "    " at(0,3).
-			print "Desired LAN = " + round(DesiredOrbit["LAN"],2) + "    " at(0,4).
-			print "Diff LAN    = " + round(LAN_diff,3) + "    " at(0,5).
-			print "Ship's INC  = " + round(ship:orbit:inclination,2) + "    " at(0,6).
-			print "Desired INC = " + round(DesiredOrbit["INC"],2) + "    " at(0,7).
-			print "Diff INC    = " + round(INC_diff,3) + "    " at(0,8).
-		} else {
-			clearscreen.
-			local INC_diff to abs(DesiredOrbit["INC"] - ship:orbit:inclination).
-			local LAN_diff to abs(DesiredOrbit["LAN"] - ship:orbit:LAN).
-			print "Initiate Burn                          " at(0,1).
-			print "DeltaV      = " + round(delta_v,2) + "    " at(0,2).
-			print "Ship's LAN  = " + round(ship:orbit:LAN,2) + "    " at(0,3).
-			print "Desired LAN = " + round(DesiredOrbit["LAN"],2) + "    " at(0,4).
-			print "Diff LAN    = " + round(LAN_diff,3) + "    " at(0,5).
-			print "Ship's INC  = " + round(ship:orbit:inclination,2) + "    " at(0,6).
-			print "Desired INC = " + round(DesiredOrbit["INC"],2) + "    " at(0,7).
-			print "Diff INC    = " + round(INC_diff,3) + "    " at(0,8).
-			set max_acc to availablethrust/mass.
-			lock throttle to delta_v/max_acc.
-			
-			local delta_inc1 to delta_inc.
-			local delta_v1 to delta_v.
-			//if delta_inc < 0.01 {
-			if INC_diff < 0.001 AND LAN_diff < 0.005 {
-				lock throttle to 0.
-				clearscreen.
-				print "Burn Complete".
-				break.
-			}
-				
-			if delta_v < 0.1 {
-				lock throttle to 0.
-				clearscreen.
-				print "Burn Complete".
-				break.
-			}
-			wait 0.
-			local delta_v2 to delta_v.
-			if delta_v2 > delta_v1 {
-				lock throttle to 0.
-				clearscreen.
-				print "Burn Aborted, DeltaV Increasing".
-				break.
-			}
-		}
-	}
 	
 	// Debugging Vecdraws
-	//set LAN_VEC_Draw to vecdraw().
-	//set LAN_VEC_Draw:startupdater to { return ship:body:position. }.
-	//set LAN_VEC_Draw:vecupdater to { return LAN_VEC. }.
-	//set LAN_VEC_Draw:show to true.
-	//set LAN_VEC_Draw:color to RGB(255,0,0).
-	//
-	//set INC_VEC_Draw to vecdraw().
-	//set INC_VEC_Draw:startupdater to { return ship:body:position. }.
-	//set INC_VEC_Draw:vecupdater to { return Inc_Normal. }.
-	//set INC_VEC_Draw:show to true.
-	//set INC_VEC_Draw:color to RGB(0,255,0).
-	//
-	//set ANG_VEC_Draw to vecdraw().
-	//set ANG_VEC_Draw:startupdater to { return ship:body:position. }.
-	//set ANG_VEC_Draw:vecupdater to { return AngVel_ship. }.
-	//set ANG_VEC_Draw:show to true.
-	//set ANG_VEC_Draw:color to RGB(0,0,255).
-	//
-	//set Rel_LAN_VEC_Draw to vecdraw().
-	//set Rel_LAN_VEC_Draw:startupdater to { return ship:body:position. }.
-	//set Rel_LAN_VEC_Draw:vecupdater to { return LAN_relative_vec. }.
-	//set Rel_LAN_VEC_Draw:show to true.
-	//set Rel_LAN_VEC_Draw:color to RGB(255,255,0).
-	//
-	//set LAN_VEL_VEC_Draw to vecdraw().
-	//set LAN_VEL_VEC_Draw:startupdater to { return V(0,0,0). }.
-	//set LAN_VEL_VEC_Draw:vecupdater to { return Vel_at_LAN/50. }.
-	//set LAN_VEL_VEC_Draw:show to true.
-	//set LAN_VEL_VEC_Draw:color to RGB(255,0,0).
-	//
-	//set LAN_VEL_VEC_Draw2 to vecdraw().
-	//set LAN_VEL_VEC_Draw2:startupdater to { return V(0,0,0). }.
-	//set LAN_VEL_VEC_Draw2:vecupdater to { return New_Vel_at_LAN/50. }.
-	//set LAN_VEL_VEC_Draw2:show to true.
-	//set LAN_VEL_VEC_Draw2:color to RGB(0,255,0).
-	//
-	//set LAN_VEL_VEC_Draw3 to vecdraw().
-	//set LAN_VEL_VEC_Draw3:startupdater to { return Vel_at_LAN/50. }.
-	//set LAN_VEL_VEC_Draw3:vecupdater to { return burn_vector/50. }.
-	//set LAN_VEL_VEC_Draw3:show to true.
-	//set LAN_VEL_VEC_Draw3:color to RGB(0,255,0).
+	set LAN_VEC_Draw to vecdraw().
+	set LAN_VEC_Draw:startupdater to { return ship:body:position. }.
+	set LAN_VEC_Draw:vecupdater to { return LAN_VEC. }.
+	set LAN_VEC_Draw:show to true.
+	set LAN_VEC_Draw:color to RGB(255,0,0).
+	
+	set INC_VEC_Draw to vecdraw().
+	set INC_VEC_Draw:startupdater to { return ship:body:position. }.
+	set INC_VEC_Draw:vecupdater to { return Inc_Normal. }.
+	set INC_VEC_Draw:show to true.
+	set INC_VEC_Draw:color to RGB(0,255,0).
+	
+	set ANG_VEC_Draw to vecdraw().
+	set ANG_VEC_Draw:startupdater to { return ship:body:position. }.
+	set ANG_VEC_Draw:vecupdater to { return AngVel_ship. }.
+	set ANG_VEC_Draw:show to true.
+	set ANG_VEC_Draw:color to RGB(0,0,255).
+	
+	set Rel_LAN_VEC_Draw to vecdraw().
+	set Rel_LAN_VEC_Draw:startupdater to { return ship:body:position. }.
+	set Rel_LAN_VEC_Draw:vecupdater to { return LAN_relative_vec. }.
+	set Rel_LAN_VEC_Draw:show to true.
+	set Rel_LAN_VEC_Draw:color to RGB(255,255,0).
+	
+	set LAN_VEL_VEC_Draw to vecdraw().
+	set LAN_VEL_VEC_Draw:startupdater to { return V(0,0,0). }.
+	set LAN_VEL_VEC_Draw:vecupdater to { return Vel_at_LAN/50. }.
+	set LAN_VEL_VEC_Draw:show to true.
+	set LAN_VEL_VEC_Draw:color to RGB(255,0,0).
+	
+	set LAN_VEL_VEC_Draw2 to vecdraw().
+	set LAN_VEL_VEC_Draw2:startupdater to { return V(0,0,0). }.
+	set LAN_VEL_VEC_Draw2:vecupdater to { return New_Vel_at_LAN/50. }.
+	set LAN_VEL_VEC_Draw2:show to true.
+	set LAN_VEL_VEC_Draw2:color to RGB(0,255,0).
 	
 	wait 1.
+	
+	ExecuteNode().
 	
 	return true.
 }
@@ -193,10 +112,7 @@ function Change_AoP_PerApo {
 	//set AoP_VEC_Draw:show to true.
 	//set AoP_VEC_Draw:color to RGB(0,255,0).
 	
-	wait 1.
-	
-	
-	
+	wait 1.	
 }
 
 function FindTheta_Vec {
@@ -338,7 +254,6 @@ function ExecuteNode {
 	clearscreen.
 	print "Alignment Complete".
 	print "Warping to Burn Point".
-	wait 2.	
 	print "Burn Starts at T-minus " + round(BurnTime,2) + "secs   ".
 	warpto(time:seconds + nextnode:eta - BurnTime - 10).
 	wait until warp <= 0.
@@ -371,9 +286,10 @@ function SetNode_BurnVector {
 	parameter timeat,V_New.
 	
 	local V_timeat to velocityat(ship,timeat):orbit.
-	local node_prograde_vec to V_timeat:direction:forevector.
-	local node_normal_vec to V_timeat:direction:topvector.
-	local node_radial_vec to V_timeat:direction:starvector.
+	
+	local node_normal_vec to vcrs(ship:body:position,ship:velocity:orbit):normalized.
+	local node_prograde_vec to V_timeat:normalized.
+	local node_radial_vec to VCRS(node_normal_vec,node_prograde_vec).
 	
 	local burn_vector to (V_New - V_timeat).
 	local burn_prograde to VDOT(node_prograde_vec,burn_vector).
@@ -465,3 +381,4 @@ if AOP_diff_percent < tolerance_percent AND APO_diff_percent < tolerance_percent
 	for n in allnodes { remove n.}
 	
 }
+clearvecdraws().
