@@ -34,6 +34,7 @@ if periapsis > 0 {
 	clearscreen.
 	set impact_found to false.
 	local count to 0.
+	local iprint to 3.
 	until impact_found {
 		local time_offset to time:seconds - T0.
 		local eta_impact to Ttest - time_offset.
@@ -44,16 +45,17 @@ if periapsis > 0 {
 		
 		local Ttest_H to Height_At_Position(Ttest_vec).
 		local error to Ttest_H - Ttest_ltln:terrainheight.
-		local iprint to 3.
+		
+		set iprint to 3.
 		print "Error            " + round(error,2) + "      " at(0,iprint).
 		set iprint to iprint + 1.
 		print "Ttest_ltln:LAT   " + round(Ttest_ltln:LAT,3) + "      " at(0,iprint).
 		set iprint to iprint + 1.
 		print "Ttest_ltln:LNG   " + round(Ttest_ltln:LNG,3) + "      " at(0,iprint).
 		set iprint to iprint + 1.
-		print "eta_impact       " + round(eta_impact,2) + "      " at(0,iprint).
-		set iprint to iprint + 1.
 		print "count            " + count + "      " at(0,iprint).
+		set iprint to iprint + 1.
+		print "eta_impact       " + round(eta_impact,2) + "      " at(0,iprint).
 		
 		// wait 1.
 		set count to count + 1.
@@ -70,5 +72,9 @@ if periapsis > 0 {
 			set Ttest to (T1 + T2)/2.
 		}
 	}
-	wait until false.
+	until false {
+		local time_offset to time:seconds - T0.
+		local eta_impact to Ttest - time_offset.
+		print "eta_impact       " + round(eta_impact,2) + "      " at(0,iprint).
+	}
 }
