@@ -43,10 +43,10 @@ function Vmax_v {
 }
 
 function Vmax_h {
-	declare parameter  buffer_dist is 0.
+	declare parameter  remainder_throttle is 1,buffer_dist is 0.
 	local R to ship:body:position.
 	local V to ship:velocity:orbit.
-	local MaxThrustAccHor to availablethrust/mass.
+	local MaxThrustAccHor to remainder_throttle*availablethrust/mass.
 	local angle_diff_h to VANG(-R, landing_pos:position - R).
 	local dist_diff_h to (angle_diff_h/360)*2*(constant:pi)*R:mag.
 	local Vmax to sqrt(MAX(0.001,2*(dist_diff_h - buffer_dist)*MaxThrustAccHor)).
@@ -103,16 +103,19 @@ set KP_V to .01.
 set KD_V to 0.005.
 set V_throttle_PID to PIDLOOP(KP_V,0,KD_V,0,1).
 set V_throttle_PID:setpoint to Vmax_v().
+set V_throttle_comp to V_vec*V_throttle_PID:update(time:seconds,-1*verticalspeed).
+
+set remainder_throttle to sqrt(max(0,1 - V_throttle_comp^2)).
 
 set KP_H to .01.
 set KD_H to 0.002.//0.02.
 set H_throttle_PID to PIDLOOP(KP_H,0,KD_H,-1,1).
-set H_throttle_PID:setpoint to Vmax_h().
+set H_throttle_PID:setpoint to Vmax_h(remainder_throttle).
 
 set KS to 1/5. // Time constant
 set S_throttle to S_throttle_func(2).
 
-set throttle_vec to V_vec*V_throttle_PID:update(time:seconds,-1*verticalspeed) + H_vec*H_throttle_PID:update(time:seconds,Speed_h) + S_vec*S_throttle.
+set throttle_vec to  + H_vec*H_throttle_PID:update(time:seconds,Speed_h) + S_vec*S_throttle.
 
 lock steering to throttle_vec:direction.
 
