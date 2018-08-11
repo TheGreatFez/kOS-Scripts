@@ -183,7 +183,7 @@ function Impact_score {
 		print round(Vert_score,3).
 	}
 	
-	local Total_score to 4*GPS_score + 0.25*DeltaV_score + 2*Vert_score.
+	local Total_score to 10*GPS_score + 0.25*DeltaV_score + Vert_score.
 	
 	return Total_score.
 }
@@ -214,52 +214,63 @@ function Slope {
 }
 
 function Optimize_Score {
-	parameter Inputs, Score_Func.
-	
-	local method is 2.
+	parameter Inputs, Score_Func, method is 1.
 	
 	local Inputs_inc to Inputs.
 	local Inputs_base to Inputs.
+	local Inputs_deltas to LIST().
+	local iInput to 0.
+	for i in Inputs {
+		Inputs_deltas:ADD(0).
+	}
+	
 	local iCount to 0.
 	local Score_0 to Score_Func(Inputs_inc).
+	local Score_1 to 0.
 	local delta is 10.
 	local gamma is 0.001.
 	clearscreen.
 	until iCount > 50 {
-		local iInput to -1.
+		local iInput to 0.
 		for Input in Inputs {
 			
-			
-			set iInput to iInput + 1.
 			set Inputs_base[iInput] to Inputs_inc[iInput].
 			set Inputs_inc[iInput] to Inputs_base[iInput] + delta.
 			local Score_p to Score_Func(Inputs_inc).
-			wait 1.
 			set Inputs_inc[iInput] to Inputs_base[iInput] - delta.
 			local Score_n to Score_Func(Inputs_inc).
-			wait 1.
-			if method = 1 {
+			if method = 1 { // Newton Rapson Method
 				local der is Slope(Score_0, Score_p, Score_n, delta).
 				print der.
-				local Input_delta is gamma*Score_0/der.
-				print Input_delta.
-				set Inputs_inc[iInput] to Inputs_base[iInput] + Input_delta.
-				set Score_0 to Score_Func(Inputs_inc).
+				set Inputs_deltas[iInput] to gamma*Score_0/der.
 			}
-			if method = 2 {
+			if method = 2 { // Hillclimb Method
 				if Score_p > Score_0 AND Score_p > Score_n {
-					set Inputs_inc[iInput] to Inputs[iInput] + delta.
-					set Score_0 to Score_p.
+					set Inputs_deltas[iInput] to delta.
 				} else if Score_n > Score_0 AND Score_n > Score_p {
-					set Inputs_inc[iInput] to Inputs[iInput] - delta.
-					set Score_0 to Score_n.
+					set Inputs_deltas[iInput] to  -1*delta.
 				} else {
-					set Inputs_inc[iInput] to Inputs[iInput].
-					//set delta to 0.5*delta.
+					set Inputs_deltas[iInput] to 0.
 				}
 			}
-				
+			set iInput to iInput + 1.
 		}
+		clearscreen.
+		print Inputs_deltas at(0,20).
+		wait 1.
+		local iInput to 0.
+		for i in Inputs_inc {
+			set Inputs_inc[iInput] to Inputs_inc[iInput] + Inputs_deltas[iInput].
+			set iInput to iInput + 1.
+		}
+		set Score_1 to Score_Func(Inputs_inc).
+		if Score_1 < Score_0 {
+			clearscreen.
+			print "Best Score Found".
+			set Inputs to Inputs_inc.
+			break.
+		}
+		
 		set iCount to iCount + 1.
 		print iCount at(0,0).
 	}
