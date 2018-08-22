@@ -1,13 +1,14 @@
 // This function calculates the direction a ship must travel to achieve the target inclination given the current ship's latitude and orbital velocity.
 
-@LAZYGLOBAL off.
+//@LAZYGLOBAL off.
 
 function inst_az {
 	parameter
 		inc. // target inclination
 	
 	// find orbital velocity for a circular orbit at the current altitude.
-	local V_orb is sqrt( body:mu / ( ship:altitude + body:radius)).
+	//local V_orb is sqrt( body:mu / ( ship:altitude + body:radius)).
+	local V_orb is ship:velocity:orbit:mag.
 	
 	// project desired orbit onto surface heading
 	local az_orb is arcsin ( cos(inc) / cos(ship:latitude)).

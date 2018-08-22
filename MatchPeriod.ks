@@ -26,7 +26,7 @@ function OrbitalPeriodMatch {
 	ExecuteNode.
 	clearscreen.
 	print "Executed Orbital Period Match to within 0.01 m/s".
-	print "Orbital Periods are different by " + round(abs(ship:orbit:period - target_period,3)) + " sec".
+	print "Orbital Periods are different by " + round(abs(ship:orbit:period - target_period),3) + " sec".
 	wait 2.
 	return.
 }

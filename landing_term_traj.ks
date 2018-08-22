@@ -57,6 +57,8 @@ function ETA_to_theta {
 }
 
 function Impact_locator {
+	parameter height_above to 2000.
+	
 	local Ttest_ltln is LATLNG(0,0).
 	local per_test to periapsis.
 	local Body_Ang_speed to 360/ship:body:rotationperiod.
@@ -97,7 +99,7 @@ function Impact_locator {
 			set Ttest_ltln to LATLNG(Ttest_ltln:LAT,Ttest_ltln:LNG - long_offset).
 			
 			local Ttest_H to Height_At_Position(Ttest_vec).
-			local error to Ttest_H - Ttest_ltln:terrainheight.
+			local error to Ttest_H - (Ttest_ltln:terrainheight + height_above).
 			
 			set iprint to 3.
 			print "Error            " + round(error,2) + "      " at(0,iprint).
@@ -137,12 +139,9 @@ function Impact_locator {
 	return LIST(Ttest_ltln,T0 + Ttest).
 }
 
-function Impact_score {
-	parameter term_traj_node, IMP_output, target_ltln.
-	local drawvec_check is false.
-	local term_traj_ltln is IMP_output[0].
-	// GPS Score is based on the angular difference between the Lattitudes and Longitudes of the
-	// target landing spot and the current impact location
+function GPS_score_func {
+	parameter target_ltln, term_traj_ltln.
+	
 	local LAT_diff is abs(target_ltln:LAT - term_traj_ltln:LAT).
 	if LAT_diff > 180 {
 		set LAT_diff to 360 - LAT_diff.
@@ -153,7 +152,16 @@ function Impact_score {
 		set LNG_diff to 360 - LNG_diff.
 	}
 	
-	local GPS_score is 1 - (LAT_diff/360) - (LNG_diff /360).
+	local GPS_score is sqrt(LAT_diff^2 + LNG_diff^2).
+}
+
+function Impact_score {
+	parameter term_traj_node, IMP_output, target_ltln.
+	local drawvec_check is false.
+	local term_traj_ltln is IMP_output[0].
+	// GPS Score is based on the angular difference between the Lattitudes and Longitudes of the
+	// target landing spot and the current impact location
+	
 	
 	// DeltaV Score is the percentage of the starting speed at the node.
 	local speed_at_node is velocityat(ship,time:seconds + nextnode:eta - 0.1):orbit:mag.

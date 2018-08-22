@@ -2,16 +2,20 @@
 set landing_pos to LATLNG(5,120).
 //set landing_pos to LATLNG(-0.09720767,-74.557677).
 
-SAS OFF.
-run executenode.
-wait 3.
-set max_acc to maxthrust/mass.
-set peri_v to velocityat(ship,time:seconds + eta:periapsis):orbit:mag.
-set delta_time to peri_v/max_acc.
 clearscreen.
 clearvecdraws().
 
-warpto(time:seconds + eta:periapsis - 2*delta_time).
+SAS OFF.
+if HASNODE {
+	run executenode.
+}
+wait 0.001.
+set max_acc to maxthrust/mass.
+set peri_v to velocityat(ship,time:seconds + eta:periapsis):orbit:mag.
+set delta_time to peri_v/max_acc.
+
+
+//warpto(time:seconds + eta:periapsis - 2*delta_time).
 function Hysteresis {
 	declare parameter input,prev_output, right_hand_limit, left_hand_limit,right_hand_output is true.
 	set output to prev_output.
@@ -124,7 +128,7 @@ set touchdown_speed to -5.
 set alt_cutoff to 100.
 
 set throttle_hyst to false.
-set throttle_hyst_UL to 25.
+set throttle_hyst_UL to 50.
 set throttle_hyst_LL to 1.
 
 set ang_hyst to false.
@@ -167,16 +171,18 @@ until ship:status = "LANDED" {
 	set H_throttle_test to MIN(1,1-H_throttle_PID:update(time:seconds,Speed_h)).
 	//set H_throttle_test to H_throttle_func().
 	
-	set S_deltaV to S_throttle_func().
-	if throttle_hyst {
-		set S_throttle_enable to true.
-		set S_throttle_test to (S_deltaV*mass)/(availablethrust*1).
-	} else {
-		set S_throttle_enable to false.
-		set S_throttle_test to 0.
-	}
+	set S_deltaV to S_throttle_func(2).
+	set S_throttle_enable to true.
+	set S_throttle_test to (S_deltaV*mass)/(availablethrust*1).
+	//if throttle_hyst {
+	//	set S_throttle_enable to true.
+	//	set S_throttle_test to (S_deltaV*mass)/(availablethrust*1).
+	//} else {
+	//	set S_throttle_enable to false.
+	//	set S_throttle_test to 0.
+	//}
 	
-	if (V_throttle^2 + H_throttle_test^2 + S_throttle_test^2) > 1 {
+	if sqrt(V_throttle^2 + H_throttle_test^2 + S_throttle_test^2) > 1 {
 		set left_over_flag to True.
 		set left_over to 1- V_throttle^2.
 		if H_throttle_test > sqrt(left_over) {
@@ -192,7 +198,8 @@ until ship:status = "LANDED" {
 		set H_throttle to H_throttle_test.
 	}
 	set Follow_Mode_Ang to VANG(landing_pos:position,ship:velocity:surface).
-	if Follow_Mode_Ang <15 {
+	set Follow_Mode_Dist to VXCL(UP:vector,landing_pos:position):mag/true_alt.
+	if Follow_Mode_Ang < 15 AND Follow_Mode_Dist < 0.1{
 		set Follow_Mode to True.
 	}
 	if groundspeed < 10 AND not(Follow_Mode) {
@@ -223,9 +230,9 @@ until ship:status = "LANDED" {
 		lock steering to LOOKDIRUP(srfretrograde:vector,facing:topvector).
 	}
 	
-	print "V_throttle = " + round(100*(VDOT(V_vec,throttle_vec)),0) + "%   "at(0,0).
-	print "H_throttle = " +round(100*(VDOT(H_vec,throttle_vec)),0) + "%   " at(0,1).
-	print "S_throttle = " +round(100*(VDOT(S_vec,throttle_vec)),0) + "%   " at(0,2).
+	print "V_throttle = " + round(100*(VDOT(V_vec,throttle_vec)),1) + "%   "at(0,0).
+	print "H_throttle = " +round(100*(VDOT(H_vec,throttle_vec)),1) + "%   " at(0,1).
+	print "S_throttle = " +round(100*(VDOT(S_vec,throttle_vec)),1) + "%   " at(0,2).
 	print "Vmax_v = " +round(Vmax_v,2) at(0,3).
 	print "Vspeed = " +round(verticalspeed,2) at(0,4).
 	print "Vmax_h = " +round(Vmax_h,2) at(0,5).

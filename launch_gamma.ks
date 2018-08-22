@@ -2,6 +2,9 @@ declare parameter OrbitAlt is 100000.
 set ship:control:pilotmainthrottle to 0.
 clearscreen.
 set circstage to 3.
+
+run lib_instaz.
+
 declare function ExecuteNode {
 	clearscreen.
 	lock throttle to 0.
@@ -98,7 +101,8 @@ declare function pitch{
 set flightmode to -1.
 set VS_switch to 30.
 set Alt_gamma to (.75)*ship:body:atm:height.
-set compass to 90.
+set inc to 25.
+set compass to inst_az(inc).
 set starting_alt to altitude.
 set pitch_des to 0.
 //set OrbitAlt to 100000.
@@ -147,6 +151,7 @@ lock AeroSwitch to Q/MaxQ.
 
 until flightmode = 3 {
 	
+	set compass to inst_az(inc).
 	set time1 to time:seconds.
 	set verticalspeed1 to verticalspeed.
 	wait 0.
@@ -171,6 +176,7 @@ until flightmode = 3 {
 	print "time_to_alt1     " + round(time_to_alt1,2) at (0,17).
 	print "time_to_alt2     " + round(time_to_alt2,2) at (0,18).
 	print "starting_TWR     " + round(starting_TWR,2) at (0,19).
+	print "compass          " + round(compass,2) at (0,20).
 	
 	
 	if MaxQ <= Q {
@@ -235,6 +241,7 @@ clearscreen.
 lock throttle to 0.
 print "Coasting until out of Atmosphere".
 wait until altitude > 70000.
+LIGHTS on.
 
 if Career():canmakenodes {
 	Circularize_apo_Node().

@@ -4,14 +4,16 @@ clearscreen.
 
 set DV_tol to 0.1.
 set DA_tol to .01.
-for node in allnodes {remove node.}
-lock Ship_angvel to VCRS(ship:velocity:orbit,(ship:position-Kerbin:position)).
-lock Target_angvel to VCRS(target:velocity:orbit,(target:position-Kerbin:position)).
+if hasnode {
+	for node in allnodes {remove node.}
+}
+lock Ship_angvel to VCRS(ship:velocity:orbit,(ship:position-ship:body:position)).
+lock Target_angvel to VCRS(target:velocity:orbit,(target:position-ship:body:position)).
 set asc_node_vec to VCRS(Ship_angvel,Target_angvel).
 lock Ship_ecc to ship:orbit:eccentricity.
 lock Ship_TA to ship:orbit:trueanomaly.
-set vec1 to VCRS((-1*Kerbin:position),asc_node_vec):normalized+Ship_angvel:normalized.
-set ang to VANG(asc_node_vec,(-1*Kerbin:position)).
+set vec1 to VCRS((-1*ship:body:position),asc_node_vec):normalized+Ship_angvel:normalized.
+set ang to VANG(asc_node_vec,(-1*ship:body:position)).
 if vec1:mag > 1 {
     set asc_node_TA to Ship_TA - ang.
     if asc_node_TA < 0 {

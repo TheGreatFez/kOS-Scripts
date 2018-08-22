@@ -1,7 +1,7 @@
 clearscreen.
 
-lock Ship_angvel to VCRS(ship:velocity:orbit,(ship:position-Kerbin:position)).
-lock Target_angvel to VCRS(target:velocity:orbit,(target:position-Kerbin:position)).
+lock Ship_angvel to VCRS(ship:velocity:orbit,(ship:position-ship:body:position)).
+lock Target_angvel to VCRS(target:velocity:orbit,(target:position-ship:body:position)).
 
 lock PlaneAngDiff to VANG(Ship_angvel,Target_angvel).
 set i to 1.
