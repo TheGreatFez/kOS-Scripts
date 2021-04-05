@@ -34,9 +34,9 @@ global manNodeLib to ({
 				set thr_var to 1*Delta_V*mass/availablethrust.
 				print "Initiate Burn                            " at(0,1).		    
 			}
-			print "Delta V = " + round(Delta_V,2) + "   " at(0,2).
-			print "Throttle = " + MIN(100,round(throttle*100)) + "%   " at(0,3).
-			print "diff_dv  = " + round(diff_dv,2) + "   " at(0,4).
+			print "Delta V = " + round(Delta_V,2) + "      " at(0,2).
+			print "Throttle = " + MIN(100,round(throttle*100)) + "%      " at(0,3).
+			print "diff_dv  = " + round(diff_dv,2) + "      " at(0,4).
 			wait 0.
 			set diff_dv to Delta_V - prev_dv.
 			if diff_dv > 0 {
@@ -50,6 +50,7 @@ global manNodeLib to ({
 		remove nextnode.
 		clearscreen.
 		print "Node Executed".
+		print "Delta V Error: " + round(Delta_V,3) + "m/s".
 		wait 2.
 	}
 

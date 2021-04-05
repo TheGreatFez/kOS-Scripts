@@ -1,5 +1,4 @@
-clearscreen.
-for node in allnodes {remove node.}
+
 lock Vper to VCRS(UP:vector,velocity:orbit/velocity:orbit:mag).
 set u to ship:body:MU.
 set e to ship:orbit:eccentricity.
@@ -17,4 +16,3 @@ set Vcir_pe to sqrt(u/(Rp)).
 set DeltaV to Vcir_pe- Vperp.
 set circ_pe_node to NODE(time:seconds + eta:periapsis,0,0,DeltaV).
 add circ_pe_node.
-run executenode.
